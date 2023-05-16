@@ -3,13 +3,6 @@ import requests
 from typing import Any
 from airflow.hooks.base import BaseHook
 
-MOVIESLENS_HOST = os.environ.get("MOVIESLENS_HOST", "movielens")
-MOVIESLENS_SCHEMA = os.environ.get("MOVIESLENS_SCHEMA", "http")
-MOVIESLENS_PORT = os.environ.get("MOVIESLENS_PORT", "5000")
-MOVIESLENS_USER = os.environ["MOVIESLENS_USER"]
-MOVIESLENS_PASSWORD = os.environ["MOVIESLENS_PASSWORD"]
-
-
 class MovielensHook(BaseHook):
     DEFAULT_HOST = "movielens"
     DEFAULT_SCHEMA = "http"
@@ -60,3 +53,8 @@ class MovielensHook(BaseHook):
 
             offset += batch_size
             total = response_json["total"]
+    
+    def close(self):
+        if self._session is not None:
+            self._session = None
+            self._base_url = None

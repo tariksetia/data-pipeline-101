@@ -8,14 +8,7 @@ from airflow import DAG
 from airflow.utils import dates
 from airflow.operators.python import PythonOperator
 from custom.hooks import MovielensHook
-
-MOVIESLENS_HOST = os.environ.get("MOVIESLENS_HOST", "movielens")
-MOVIESLENS_SCHEMA = os.environ.get("MOVIESLENS_SCHEMA", "http")
-MOVIESLENS_PORT = os.environ.get("MOVIESLENS_PORT", "5000")
-MOVIESLENS_USER = os.environ["MOVIESLENS_USER"]
-MOVIESLENS_PASSWORD = os.environ["MOVIESLENS_PASSWORD"]
-
-
+from custom.opertators import MovielensFetchRatingsOperator
 
 def _fetch_ratings(conn_id, templates_dict, batch_size=1000):
     logger = logging.getLogger(__name__)
@@ -68,18 +61,14 @@ with DAG(
     schedule_interval="@daily",
     catchup=False
 ):  
-    fetch_ratings = PythonOperator(
+    fetch_ratings = MovielensFetchRatingsOperator(
         task_id="fetch_rating",
-        python_callable=_fetch_ratings,
-        op_kwargs={
-            "conn_id": "movielens"
-        },
-        templates_dict={
-            "start_date": "{{ds}}",
-            "end_date": "{{next_ds}}",
-            "output_path": "/data/ratings/{{ds}}.json"
-        }
+        conn_id="movielens",
+        start_date="{{ds}}",
+        end_date="{{next_ds}}",
+        output_path="/data/ratings/{{ds}}.json"
     )
+
     rank_movies = PythonOperator(
         task_id="rank_movies",
         templates_dict={
