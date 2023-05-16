@@ -61,6 +61,8 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    MOVIESLENS_USER: 'airflow'
+    MOVIESLENS_PASSWORD: 'airflow'
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -283,6 +285,16 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+  
+  movielens:
+    build: docker/movielens-api
+    image: manning-airflow/movielens-api
+    container_name: movielens
+    ports:
+      - "9999:5000"
+    environment:
+      API_USER: airflow
+      API_PASSWORD: airflow
 
 volumes:
   postgres-db-volume:

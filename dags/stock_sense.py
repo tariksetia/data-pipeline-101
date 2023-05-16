@@ -1,12 +1,12 @@
-import logging
 import json
+import logging
 from urllib import request
-from airflow.utils import dates
+
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-
+from airflow.utils import dates
 
 
 def _get_wikimedia_data(output_path, execution_date, **context):
@@ -33,7 +33,7 @@ def _fetch_pageviews(pagenames, page_views_path, **context):
                 result[page_title.lower()] += int(views_count)
 
     logging.info(json.dumps(result, indent=2))
-    
+
     execution_date = context["execution_date"]
     with open("/tmp/view_count.sql", "w") as f:
         for page_name, count in result.items():
@@ -47,7 +47,7 @@ with DAG(
     start_date=dates.days_ago(3),
     schedule_interval="@hourly",
     catchup=True,
-    template_searchpath="/tmp"
+    template_searchpath="/tmp",
 ) as dag:
     output_path = "/tmp/wikipageviews.gz"
 
@@ -69,24 +69,30 @@ with DAG(
             "page_views_path": "/tmp/wikipageviews",
         },
     )
-    
+
     create_table_if_not_exist = PostgresOperator(
         task_id="create_table_if_not_exist",
         postgres_conn_id="my_postgres",
-        sql= """
+        sql="""
         CREATE TABLE IF NOT EXISTS page_view_counts (
             page_name VARCHAR(50) NOT NULL,
             view_count INT NOT NULL,
             datetime TIMESTAMP NOT NULL
         );
-        """
+        """,
     )
-    
+
     write_to_postgres = PostgresOperator(
         task_id="write_to_postgres",
         postgres_conn_id="my_postgres",
-        sql="view_count.sql"
+        sql="view_count.sql",
     )
-    get_wikimedia_data >> extract_gz >> fetch_pageviews >> create_table_if_not_exist >> write_to_postgres
+    (
+        get_wikimedia_data
+        >> extract_gz
+        >> fetch_pageviews
+        >> create_table_if_not_exist
+        >> write_to_postgres
+    )
 
-#airflow connections add --conn-type postgres --conn-host postgres --conn-login airflow --conn-password airflow my_postgres
+# airflow connections add --conn-type postgres --conn-host postgres --conn-login airflow --conn-password airflow my_postgres
